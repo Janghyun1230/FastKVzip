@@ -1,0 +1,11 @@
+*.pt
+*.png
+*.pdf
+**/__pycache__
+*.json
+*.jsonl
+*.csv
+
+!R-KV/data/*.jsonl
+!kvzip/utils/head_score/*.pt
+**/test*.sh

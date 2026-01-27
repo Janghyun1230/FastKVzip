@@ -95,45 +95,11 @@ def plot(train_losses, test_losses, name="", log=False, path="./result"):
     plt.close()
 
 
-def get_model_id(name: str):
-    """We support abbreviated model names such as:
-    llama3.1-8b, llama3.2-*b, qwen2.5-*b, qwen3-*b, and gemma3-*b.
-    The full model ID, such as "meta-llama/Llama-3.1-8B-Instruct", is also supported.
-    """
-
-    match = re.search(r"(\d+)b", name)
-    if match is not None:
-        size = match.group(1)
-
-    if name == "llama3.1-8b":
-        return "meta-llama/Llama-3.1-8B-Instruct"
-
-    elif name.startswith("llama3.2-"):
-        assert size in ["1", "3"], "Model is not supported!"
-        return f"meta-llama/Llama-3.2-{size}B-Instruct"
-
-    elif name.startswith("qwen2.5-"):
-        assert size in ["7", "14"], "Model is not supported!"
-        return f"Qwen/Qwen2.5-{size}B-Instruct-1M"
-
-    elif name.startswith("qwen3-"):
-        assert size in ["0.6", "1.7", "4", "8", "14", "32"], "Model is not supported!"
-        return f"Qwen/Qwen3-{size}B"
-
-    elif name.startswith("gemma3-"):
-        assert size in ["1", "4", "12", "27"], "Model is not supported!"
-        return f"google/gemma-3-{size}b-it"
-
-    else:
-        return name  # Warning: some models might not be compatible and cause errors
-
-
 def gate_paths(model_name, file_name=""):
     base_path = "/root/code/result_gate/"
 
     if not file_name:
-        model_id = get_model_id(model_name)
-        config = AutoConfig.from_pretrained(model_id)
+        config = AutoConfig.from_pretrained(model_name)
         ngroup = config.num_attention_heads // config.num_key_value_heads
         file_name = f"q{ngroup}_dim16_sink16"
 

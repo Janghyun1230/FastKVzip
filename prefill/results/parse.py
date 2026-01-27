@@ -3,7 +3,6 @@ from collections import defaultdict
 
 import numpy as np
 from datasets import load_dataset
-from eval import get_data_list, set_ratios
 from results.metric import evaluate_answer
 
 
@@ -38,12 +37,12 @@ def get_data_list(dataname, modelname=""):
     else:
         data_list = [dataname]
 
-    if any(k in modelname for k in ("qwen3", "gemma3", "gemma-3")):
+    if any(k in modelname.lower() for k in ("qwen3", "gemma3", "gemma-3")):
         # Evaluate performance on shorter version for models that achieve near zero performance on specific tasks.
         data_list = [
             f"{x}_short" if x == "scbench_prefix_suffix" else x for x in data_list
         ]
-        if not "instruct" in modelname:
+        if not "instruct" in modelname.lower():
             data_list = [f"{x}_short" if x == "scbench_kv" else x for x in data_list]
             data_list = [f"{x}_mid" if x == "scbench_mf" else x for x in data_list]
 
@@ -131,11 +130,8 @@ def sum_list_of_list(l):
     return score
 
 
-def set_ratios(model_name):
-    if "duo" == model_name:
-        ratios = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4]
-    else:
-        ratios = [1.0, 0.75, 0.5, 0.4, 0.3, 0.2]
+def set_ratios():
+    ratios = [1.0, 0.75, 0.5, 0.4, 0.3, 0.2]
     return ratios
 
 
@@ -146,7 +142,9 @@ if __name__ == "__main__":
     import os
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model", type=str, default="Qwen/Qwen3-8B")
+    parser.add_argument(
+        "-m", "--model", type=str, default="qwen2.5-7b-instruct-1m_gate_w4096"
+    )
     parser.add_argument("-d", "--data", type=str, default="all")
     parser.add_argument("-s", "--level", type=str, default="pair")
     parser.add_argument("--task", type=str, default="qa")
@@ -154,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num", type=int, default=None)
     args = parser.parse_args()
 
-    ratios = set_ratios(args.model)
+    ratios = set_ratios()
     folder_tag = f"_{args.tag}" if args.tag else ""
     args.model += folder_tag
     cur_path = "./results"

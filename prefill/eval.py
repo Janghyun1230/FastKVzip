@@ -1,11 +1,8 @@
 from collections import defaultdict
 
 
-def set_ratios(model_name):
-    if "duo" == model_name:
-        ratios = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4]
-    else:
-        ratios = [0.75, 0.5, 0.4, 0.3, 0.2]
+def set_ratios():
+    ratios = [0.75, 0.5, 0.4, 0.3, 0.2]
     return ratios
 
 
@@ -50,12 +47,12 @@ def get_data_list(dataname, modelname=""):
     else:
         data_list = [dataname]
 
-    if any(k in modelname for k in ("qwen3", "gemma3", "gemma-3")):
+    if any(k in modelname.lower() for k in ("qwen3", "gemma3", "gemma-3")):
         # Evaluate performance on shorter version for models that achieve near zero performance on specific tasks.
         data_list = [
             f"{x}_short" if x == "scbench_prefix_suffix" else x for x in data_list
         ]
-        if not "instruct" in modelname:
+        if not "instruct" in modelname.lower():
             data_list = [f"{x}_short" if x == "scbench_kv" else x for x in data_list]
             data_list = [f"{x}_mid" if x == "scbench_mf" else x for x in data_list]
 
@@ -97,7 +94,7 @@ if __name__ == "__main__":
             eval = Evaluator(model, inputs, info)
 
             outputs = defaultdict(list)
-            for ratio in set_ratios(args.model):
+            for ratio in set_ratios():
                 thres, ratio_true = kv.prune(ratio, args.level)
                 results = eval(kv, generate=True)  # generation
 

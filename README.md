@@ -1,3 +1,8 @@
+# Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction
+
+[[Paper](http://arxiv.org/abs/2601.17668)]
+
+
 ## Installation
 
 ```bash
@@ -8,35 +13,54 @@ cd prefill
 pip install -r requirements.txt
 ```
 
-## Scripts
-### Long-context tasks (Prefilling intensive)
+## Prefilling-intensive tasks
 ```bash
 cd prefill
-source run.sh $model_name
+python -B eval_chunk.py -w gate -m $MODEL -d all 
 ```
+- Results will be saved at the ```./prefill/results``` folder. 
+- For other baselines, please refer to `run.sh`.
 
-Results will be saved at the ```./prefill/results``` folder. For eval, (refer to ./prefill/results/parse.py)
+To get scores,
 ```bash
-python -B -m results.parse -m [folder_name]
+python -B -m results.parse -m qwen2.5-7b-instruct-1m_gate_chunk16k_w4096
 ```
+- See `./prefill/results/parse.py` for more details.
 
-### Reasoning tasks (Decoding intensive)
-```bash
-cd R-KV
-source run.sh
-```
 
-Results will be saved at the ```./R-KV/results``` folder. For eval, (refer to ./R-KV/evaluation/eval_math.py)
-```bash
-source eval.sh
-```
+## Decoding-intensive tasks
 Please install required packages before evalution:
 ```bash
 pip install -r requirements.txt
 ```
+We borrowed the evaluation source codes from [R-KV](https://github.com/Zefan-Cai/R-KV).
 
-### Train gates
+```bash
+cd math
+python -B run_math.py --method fastkvzip --kv_budget 4096 --model_path Qwen/Qwen3-8B --dataset_name aime24 --seed 0
+```
+- See `source run.sh` for reproducing other baselines.
+- Results will be saved at the ```./math/results``` folder. 
+- To get scores,
+```bash
+source eval.sh
+```
+- See `./math/evaluation/eval_math.py` for more details.
+
+## Train gates
 ```bash
 source train_gate.sh $model_name
 ```
-Results will be save at the ```./result_gate``` folder.
+- Results will be save at the ```./result_gate``` folder.
+- After training gates, please corrects the `file_path` in the `get_gate_weight` function from `prefill/attention/gate.py` and `math/method/load_gate.py`.
+
+## Citation
+```bibtex
+@article{kim2026fastkvzip,
+        title={Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction}, 
+        author={Jang-Hyun Kim and Dongyoon Han and Sangdoo Yun},
+        year={2026},
+        journal={arXiv preprint arXiv:2601.17668},
+}
+```
+

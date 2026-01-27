@@ -12,7 +12,7 @@ from transformers import AutoConfig
 from transformers.models.qwen3.modeling_qwen3 import Qwen3RMSNorm
 
 from load_data import load_data, split_fn
-from utils import acc_fn, gate_paths, get_model_id, loss_fn, lr_schedule, plot
+from utils import acc_fn, gate_paths, loss_fn, lr_schedule, plot
 
 
 def load_gate(model_name, file_name=""):
@@ -213,8 +213,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.ngroup == -1:
-        model_id = get_model_id(args.model)
-        config = AutoConfig.from_pretrained(model_id)
+        config = AutoConfig.from_pretrained(args.model)
         args.ngroup = config.num_attention_heads // config.num_key_value_heads
 
     tag = f"q{args.ngroup}_dim{args.dim}"

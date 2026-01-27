@@ -11,13 +11,11 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 dataset2key = {
-    "gsm8k": ["question", "answer"],
     "aime24": ["question", "answer"],
     "math": ["problem", "answer"],
 }
 
 dataset2max_length = {
-    "gsm8k": 8192,
     "math": 16384,
     "aime24": 32768,
 }
@@ -194,7 +192,7 @@ def parse_arguments():
     parser.add_argument(
         "--kv_budget",
         type=int,
-        default=None,
+        default=4096,
         help="the size of KV cache budget token length",
     )
     parser.add_argument(

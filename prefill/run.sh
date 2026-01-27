@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-for MODEL in qwen2.5-14b gemma3-12b Qwen/Qwen3-8B-FP8; do  # qwen2.5-7b qwen2.5-14b qwen3-8b Qwen/Qwen3-8B-FP8 gemma3-12b
-    python -B eval.py -w "" -m $MODEL -d all  # kvzip
-    python -B eval_chunk.py -w gate -m $MODEL -d all
-    python -B eval_chunk.py -w head -m $MODEL -d all
-    python -B eval_chunk.py -w expect --level pair-head -m $MODEL -d all
-    python -B eval_chunk.py -w snap --level pair-head -m $MODEL -d all
+for MODEL in Qwen/Qwen2.5-7B-Instruct-1M Qwen/Qwen3-8B; do 
+    python -B eval_chunk.py -w gate -m $MODEL -d all  # FastKVzip
+    python -B eval.py -w "" -m $MODEL -d all  # KVzip
+    python -B eval_chunk.py -w head -m $MODEL -d all  # DuoAttention
+    python -B eval_chunk.py -w expect --level pair-head -m $MODEL -d all  # Expected Attention
+    python -B eval_chunk.py -w snap --level pair-head -m $MODEL -d all  # SnapKV
 done

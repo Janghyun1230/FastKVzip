@@ -31,7 +31,7 @@ if __name__ == "__main__":
             del kv
 
             outputs = defaultdict(list)
-            for t, ratio in enumerate(set_ratios(args.model)):
+            for t, ratio in enumerate(set_ratios()):
                 kv = dataset.prefill_context(
                     data_idx,
                     load_score=args.level == "head",

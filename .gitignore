@@ -8,4 +8,5 @@
 
 !R-KV/data/*.jsonl
 !kvzip/utils/head_score/*.pt
+!data/method.png
 **/test*.sh

@@ -1,3 +1,9 @@
+# ==============================================================================
+# Official implementation of "Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction"
+# Authors: Jang-Hyun Kim, Dongyoon Han, Sangdoo Yun
+# Affiliation: NAVER AI Lab
+# Paper: https://arxiv.org/abs/2601.17668
+# ==============================================================================
 import os
 
 import torch
@@ -40,8 +46,6 @@ def load_data(
     add_self_score=False,
 ):
     folders = [
-        # ("fineweb_10k", (0, 15)),
-        # ("fineweb_10k_cat", (0, 2)),
         ("fineweb_10k", (0, 29)),
         ("fineweb_10k_cat", (0, 5)),
     ]

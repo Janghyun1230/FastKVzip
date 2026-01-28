@@ -9,7 +9,7 @@ def load_dataset_all(name, tokenizer, n_data=100):
     """
     Each data example has a format of {context: str, question: List[str], answers: List[str]}.
 
-    possible datasets = ["mrcr", "squad", "gsm",
+    possible datasets = ["squad", "gsm",
                         ""scbench_kv", "scbench_vt",  scbench_many_shot", "scbench_mf", "scbench_repoqa",
                         "scbench_choice_eng", "scbench_prefix_suffix", "scbench_summary", "scbench_qa_eng",
                         "scbench_summary_with_needles", "scbench_repoqa_and_kv"]

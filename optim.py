@@ -1,3 +1,9 @@
+# ==============================================================================
+# Official implementation of "Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction"
+# Authors: Jang-Hyun Kim, Dongyoon Han, Sangdoo Yun
+# Affiliation: NAVER AI Lab
+# Paper: https://arxiv.org/abs/2601.17668
+# ==============================================================================
 import argparse
 import math
 import os

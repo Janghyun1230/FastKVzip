@@ -19,32 +19,20 @@ parser.add_argument(
     help="pair-head/layer: uniform head/layer-budget. head: context-independent head-level eviction.",
 )
 
-parser.add_argument(
-    "-m",
-    "--model",
-    type=str,
-    default="Qwen/Qwen2.5-7B-Instruct-1M",
-    help="check the model list in model/load.py. recommended to use abbreviated model names, e.g., llama3.1-8b, qwen2.5-7b",
-)
-
+parser.add_argument("-m", "--model", type=str, default="Qwen/Qwen2.5-7B-Instruct-1M")
 parser.add_argument(
     "-d",
     "--data",
     type=str,
     default="squad",
-    help="check the dataset list in data/load.py (e.g., squad, needle, scbench_kv)",
+    help="check the dataset list in data/load.py (e.g., squad, scbench_kv)",
 )
 parser.add_argument("--idx", type=int, default=0, help="the index of a data example")
 parser.add_argument(
     "--num", type=int, default=100, help="the total number of eval data"
 )
-parser.add_argument(
-    "--save_head_score", action="store_true", help="save head-level importance score"
-)
 
-parser.add_argument(
-    "-w", "--weight_path", type=str, default=""
-)  # expect, head, gate, ""
+parser.add_argument("-w", "--weight_path", type=str, default="gate")
 parser.add_argument("--prefill_chunk", type=int, default=16000)
 parser.add_argument("--window_size", type=int, default=4096)
 parser.add_argument("--tag", type=str, default="", help="evaluation folder name tag")

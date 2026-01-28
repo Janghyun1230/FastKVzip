@@ -26,14 +26,6 @@ if __name__ == "__main__":
     tt("[get answers and prediction probabilities for evaluation]")
     print()
 
-    if args.save_head_score:
-        head_score = torch.stack(kv.score, dim=0).squeeze()
-        print(head_score.shape)
-        torch.save(
-            head_score.amax(-1),
-            f"./utils/head_score/{model.name}-{args.data}-{args.idx}.pt",
-        )
-
     kv.prune(args.ratio, args.level)  # evict KV
     eval = Evaluator(model, inputs, info, verbose=True)
 

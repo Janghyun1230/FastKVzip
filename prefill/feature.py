@@ -42,7 +42,7 @@ if __name__ == "__main__":
                 save_hidden=True,
                 # do_score=False,
             )
-            tt("prefill context and get importance score")
+            tt("Prefill context and get importance score")
 
             hidden = torch.stack(kv.hidden_cache, dim=0).squeeze()
             hidden = hidden[..., kv.start_idx : kv.end_idx, :]
@@ -53,4 +53,4 @@ if __name__ == "__main__":
             print(score.shape, hidden.shape, kv.prefill_ids.shape)
 
             del kv
-            tt("Save time")
+            tt("Features saved")

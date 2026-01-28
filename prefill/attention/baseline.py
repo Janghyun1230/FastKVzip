@@ -1,3 +1,9 @@
+# ==============================================================================
+# Official implementation of "Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction"
+# Authors: Jang-Hyun Kim, Dongyoon Han, Sangdoo Yun
+# Affiliation: NAVER AI Lab
+# Paper: https://arxiv.org/abs/2601.17668
+# ==============================================================================
 import math
 
 import torch
@@ -88,6 +94,11 @@ class SnapKV:
 
 
 class ExpectedAttentionPress:
+    # SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    # SPDX-License-Identifier: Apache-2.0
+    # Code copied from the NVIDIA KVpress, with minimal modifications.
+    # Refer to the code in https://github.com/NVIDIA/kvpress/blob/main/kvpress/presses/expected_attention_press.py
+
     def __init__(self, model):
         self.name = "expect"
         self.n_future_positions: int = 512

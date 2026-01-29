@@ -3,7 +3,8 @@
 [[Paper](http://arxiv.org/abs/2601.17668)]
 [[Proejct Page](https://janghyun1230.github.io/fastkvzip/)]
 
-<img src="./data/method.png" width="800">
+
+<img src="./data/method.png" width="800" style="margin-top: 10px;">
 
 ## What's New
 
@@ -15,6 +16,7 @@ ratio</b> while significantly improving attention efficiency.
 
 
 ## Installation
+Supported GPUs: NVIDIA Ampere (e.g, A100, RTX3090), and Hopper (e.g., H100).
 
 ```bash
 pip install torch==2.7.0 --index-url https://download.pytorch.org/whl/cu128
@@ -31,44 +33,14 @@ We release trained gates for
 - Qwen/Qwen3-4B-Instruct-2507
 - google/gemma-3-12b-it
 
-You can evaluate Fast KVzip with these models by running codes below. Gates will be automatically downloaded via HuggingFace.
+Gates for these models will be automatically downloaded via HuggingFace.
 - For other models, you first need to train gates. Please refer the to the section `Train Gates for New Models` in this README.
 
 
-## Prefill-Intensive Tasks
-```bash
-cd prefill
-python -B eval_chunk.py -w gate -m $MODEL_ID -d all 
-```
-- Results will be saved at the ```./prefill/results``` folder. 
-- We release the implementation of other baselines compared in our paper. Please refer to `run.sh`.
+## Evaluation
+- For prefill-intensive tasks, please refer to [`./prefill`](https://github.com/Janghyun1230/FastKVzip/tree/main/prefill).
+- For decoding-intensive tasks, please refer to [`./math`](https://github.com/Janghyun1230/FastKVzip/tree/main/math).
 
-To get task scores,
-```bash
-python -B -m results.parse -m qwen2.5-7b-instruct-1m_gate_chunk16k_w4096
-```
-- See `./prefill/results/parse.py` for more details.
-
-
-## Decoding-Intensive Tasks
-Please install required packages before evalution:
-```bash
-pip install -r requirements.txt
-```
-We borrowed the evaluation source codes from [R-KV](https://github.com/Zefan-Cai/R-KV).
-
-```bash
-cd math
-python -B run_math.py --method fastkvzip --kv_budget 4096 --model_path Qwen/Qwen3-8B --dataset_name aime24 --seed 0
-```
-- See `source run.sh` for reproducing other baselines.
-- Results will be saved at the ```./math/results``` folder. 
-
-To get task scores,
-```bash
-source eval.sh
-```
-- See `./math/evaluation/eval_math.py` for more details.
 
 ## Train Gates for New Models
 ```bash

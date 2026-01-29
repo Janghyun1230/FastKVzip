@@ -13,7 +13,9 @@ if __name__ == "__main__":
     print(f"tag: {args.tag}")
 
     args.kv_type = "retain"  # RetainCache enables efficient evaluation across multiple compression ratios with a single prefilling.
-    model = ModelKVzip(args.model, kv_type=args.kv_type, gate=args.weight_path)
+    model = ModelKVzip(
+        args.model, kv_type=args.kv_type, gate_path_or_name=args.gate_path_or_name
+    )
 
     for args.data in get_data_list(args.data, model.name):
         dataset = load_dataset_all(args.data, model.tokenizer)  # list of data
@@ -25,6 +27,7 @@ if __name__ == "__main__":
         print("=" * 80, f"\nStart evaluation with {args.idx}~{max_idx} samples")
 
         for data_idx in range(args.idx, max_idx):
+            # Get full KV cache generation results
             kv = dataset.prefill_context(data_idx, do_score=False)
             inputs, info = dataset.generate_answer(data_idx, kv, prob=False)
             eval = Evaluator(model, inputs, info)
@@ -32,6 +35,7 @@ if __name__ == "__main__":
 
             outputs = defaultdict(list)
             for t, ratio in enumerate(set_ratios()):
+                # Get generation results with chunked-prefill-evict
                 kv = dataset.prefill_context(
                     data_idx,
                     load_score=args.level == "head",
@@ -41,14 +45,10 @@ if __name__ == "__main__":
                     level=args.level,
                     do_score=False,
                 )
-
-                thres, ratio_true = 0, 0
-                results = eval(kv, generate=True)  # generation
+                results = eval(kv, generate=True)
 
                 for fmt, v in results.items():
-                    outputs[fmt].append(
-                        [[ratio, round(ratio_true, 4), round(thres, 4)], v]
-                    )
+                    outputs[fmt].append([[ratio, 0, 0], v])
 
                 del kv
 

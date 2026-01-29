@@ -72,7 +72,7 @@ class Weight(nn.Module):
         return repr_str
 
 
-def load_gate(model_name="Qwen/Qwen3-8B", file_name="gate", device="cuda"):
+def load_gate(model_name="Qwen/Qwen3-8B", file_name="fastkvzip", device="cuda"):
     if not model_name:
         raise AssertionError("Model_name is empty. Please check load_gate.")
     state_dict, gate_id = get_gate_weight(model_name, file_name)
@@ -99,8 +99,8 @@ def load_gate(model_name="Qwen/Qwen3-8B", file_name="gate", device="cuda"):
     return modules
 
 
-def gate_paths(model_name, file_name="gate"):
-    if file_name == "gate":
+def get_gate_id(model_name, file_name="fastkvzip"):
+    if file_name == "fastkvzip":
         config = AutoConfig.from_pretrained(model_name)
         if hasattr(config, "text_config"):
             config = config.text_config
@@ -113,11 +113,15 @@ def gate_paths(model_name, file_name="gate"):
 
 
 def get_gate_weight(model_name, file_name):
-    gate_id = gate_paths(model_name, file_name)
+    gate_id = get_gate_id(model_name, file_name)
 
-    file_path = hf_hub_download(
-        repo_id="Jang-Hyun/Fast-KVzip", filename=gate_id, repo_type="model"
-    )
+    try:
+        file_path = hf_hub_download(
+            repo_id="Jang-Hyun/Fast-KVzip", filename=gate_id, repo_type="model"
+        )
+    except:
+        base_path = "~/FastKVzip"  ## Fix this!
+        file_path = os.path.join(base_path, "result_gate", file_name)
 
     # Load the PyTorch tensor/dictionary
     weights = torch.load(file_path, weights_only=False)["module"]

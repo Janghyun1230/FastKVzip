@@ -7,7 +7,9 @@ from utils import Evaluator, TimeStamp
 if __name__ == "__main__":
     from args import args
 
-    model = ModelKVzip(args.model, kv_type=args.kv_type, gate=args.weight_path)
+    model = ModelKVzip(
+        args.model, kv_type=args.kv_type, gate_path_or_name=args.gate_path_or_name
+    )
 
     dataset = load_dataset_all(args.data, model.tokenizer)  # list of data
     dataset = DataWrapper(args.data, dataset, model)

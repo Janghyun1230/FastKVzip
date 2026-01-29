@@ -32,7 +32,7 @@ parser.add_argument(
     "--num", type=int, default=100, help="the total number of eval data"
 )
 
-parser.add_argument("-w", "--weight_path", type=str, default="gate")
+parser.add_argument("-g", "--gate_path_or_name", type=str, default="fastkvzip")
 parser.add_argument("--prefill_chunk", type=int, default=16000)
 parser.add_argument("--window_size", type=int, default=4096)
 parser.add_argument("--tag", type=str, default="", help="evaluation folder name tag")
@@ -42,5 +42,5 @@ args = parser.parse_args()
 if args.tag:
     args.tag = f"_{args.tag}"
 
-if args.weight_path:
-    args.tag = "_" + args.weight_path.split("/")[-1] + args.tag
+if args.gate_path_or_name:
+    args.tag = "_" + args.gate_path_or_name.split("/")[-1] + args.tag

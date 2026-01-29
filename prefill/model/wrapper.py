@@ -44,7 +44,7 @@ def chunk_fn(ctx_ids: torch.Tensor, chunk_size: int) -> List[torch.Tensor]:
 
 class ModelKVzip:
 
-    def __init__(self, model_name: str, kv_type: str = "evict", gate=""):
+    def __init__(self, model_name: str, kv_type: str = "evict", gate_path_or_name=""):
         self.model, self.tokenizer = load_model(model_name)
 
         self.name = self.model.name
@@ -52,7 +52,7 @@ class ModelKVzip:
         self.device = self.model.device
         self.config = self.model.config
 
-        self.gates = load_gate(self, gate)
+        self.gates = load_gate(self, gate_path_or_name)
 
         if isinstance(self.model, Gemma3ForCausalLM):
             self.kv_type = "hybrid_static"

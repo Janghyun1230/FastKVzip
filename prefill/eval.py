@@ -9,7 +9,6 @@ def set_ratios():
 def get_data_list(dataname, modelname=""):
     short = [
         "squad",  # 203 (502)
-        "needle",  # 3500 (8000)
         "gsm",  # 86 (120)
     ]
     mid = [
@@ -68,12 +67,14 @@ if __name__ == "__main__":
     from data import DataWrapper, load_dataset_all
     from utils import Evaluator, TimeStamp, save_result, set_gen_length
 
-    if args.weight_path:
+    if args.gate_path_or_name:
         args.tag += f"_w{args.window_size}"
         print(f"tag: {args.tag}")
 
     args.kv_type = "retain"  # RetainCache enables efficient evaluation across multiple compression ratios with a single prefilling.
-    model = ModelKVzip(args.model, kv_type=args.kv_type, gate=args.weight_path)
+    model = ModelKVzip(
+        args.model, kv_type=args.kv_type, gate_path_or_name=args.gate_path_or_name
+    )
 
     for args.data in get_data_list(args.data, model.name):
         dataset = load_dataset_all(args.data, model.tokenizer)  # list of data

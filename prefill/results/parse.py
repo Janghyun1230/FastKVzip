@@ -14,7 +14,6 @@ def get_data_list(dataname, modelname=""):
         "scbench_qa_eng",  # 122101
     ]
     retv = [
-        "needle",  # 3500 (8000)
         "scbench_kv",  # 169428
         "scbench_prefix_suffix",  # 112635
         "scbench_repoqa",  # 72499
@@ -143,7 +142,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-m", "--model", type=str, default="qwen2.5-7b-instruct-1m_gate_w4096"
+        "-m",
+        "--model",
+        type=str,
+        default="qwen2.5-7b-instruct-1m_fastkvzip_chunk16k_w4096",
     )
     parser.add_argument("-d", "--data", type=str, default="all")
     parser.add_argument("-s", "--level", type=str, default="pair")

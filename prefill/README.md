@@ -1,6 +1,6 @@
 ## Prefill-Intensive Tasks
 ```bash
-python -B eval_chunk.py -w gate -m $MODEL_ID -d all 
+python -B eval_chunk.py -g fastkvzip -m $MODEL_ID -d all 
 ```
 - Results will be saved at the ```./prefill/results``` folder. 
 - We provide the implementation of other baselines compared in our paper. Please refer to `run.sh`.

@@ -66,7 +66,7 @@ def llama_qwen_attn_forward(
     if past_key_value.compute_gate and past_key_value.gates is not None:
         if past_key_value.gates[self.layer_idx].name == "expect":
             score = past_key_value.gates[self.layer_idx](
-                query_states_pre, key_states, value_states
+                query_states_pre, key_states, value_states, cache_position
             )
             past_key_value._update_score(self.layer_idx, score)
 
@@ -92,7 +92,7 @@ def llama_qwen_attn_forward(
     dropout_rate = self.attention_dropout if self.training else 0.0
 
     #### Updated #############################################################
-    if getattr(past_key_value, "get_score", None):  # calculate KV importance
+    if getattr(past_key_value, "get_score", None):  # calculate KVzip importance score
         past_key_value._get_score(query_states, key_states, self.layer_idx)
 
     if getattr(past_key_value, "flatten", None):  # attention with pruned cache

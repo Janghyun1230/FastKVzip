@@ -19,8 +19,8 @@ parser.add_argument(
     "--level",
     type=str,
     default="pair",
-    choices=["pair", "pair-head", "pair-layer", "head"],
-    help="pair-head/layer: uniform head/layer-budget. head: context-independent head-level eviction.",
+    choices=["pair", "pair-head", "pair-layer", "adakv-layer", "head"],
+    help="pair-head/layer: uniform head/layer-budget; adakv-layer: with safeguard; head: context-independent head-level eviction.",
 )
 # Model and Data
 parser.add_argument("-m", "--model", type=str, default="Qwen/Qwen2.5-7B-Instruct-1M")

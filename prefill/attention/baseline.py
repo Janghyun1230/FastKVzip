@@ -1,9 +1,3 @@
-# ==============================================================================
-# Official implementation of "Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction"
-# Authors: Jang-Hyun Kim, Dongyoon Han, Sangdoo Yun
-# Affiliation: NAVER AI Lab
-# Paper: https://arxiv.org/abs/2601.17668
-# ==============================================================================
 import math
 
 import torch
@@ -96,16 +90,16 @@ class SnapKV:
 class ExpectedAttentionPress:
     # SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
     # SPDX-License-Identifier: Apache-2.0
-    # Code copied from the NVIDIA KVpress, with minimal modifications.
+    # Codes are copied from the NVIDIA KVpress, with minimal modifications.
     # Refer to the code in https://github.com/NVIDIA/kvpress/blob/main/kvpress/presses/expected_attention_press.py
 
-    def __init__(self, model):
+    def __init__(self, model, cov=False):
         self.name = "expect"
         self.n_future_positions: int = 512
         self.n_sink: int = 0  # we retain system prompt's KV, so do not need to set this
-        self.use_covariance: bool = False  # this has a negative effect on performance
+        self.use_covariance: bool = cov  # this decreases performance in our experiments
         self.use_vnorm: bool = True
-        self.epsilon: float = 0.0
+        self.epsilon: float = 0.02  # default value used in KVPress evaluation
 
         self.config = model.config
         self.rotary_emb = model.model.rotary_emb
@@ -115,13 +109,12 @@ class ExpectedAttentionPress:
             self.config.hidden_size // self.config.num_attention_heads,
         )
 
-    def get_query_statistics(self, queries_pre: torch.Tensor):
+    def get_query_statistics(self, queries_pre: torch.Tensor, cache_position):
         """
         Compute the mean and covariance matrix of the queries
         """
 
-        q_len = queries_pre.shape[2]  # need to fix this for chunked prefilling
-
+        q_len = queries_pre.shape[2]
         # Remove first hidden_states that likely contain outliers
         sink = 4
         query_states = queries_pre[:, :, min(sink, q_len - 1) :]
@@ -140,7 +133,8 @@ class ExpectedAttentionPress:
         mu = mu.squeeze(2)
 
         # Apply RoPE to the mean and covariance matrix of the queries
-        mu, cov = self.apply_avg_rope(mu, cov, q_len)
+        q_len_total = cache_position[-1] + 1  # considering chunked prefill
+        mu, cov = self.apply_avg_rope(mu, cov, q_len_total)
 
         return mu, cov
 
@@ -171,6 +165,7 @@ class ExpectedAttentionPress:
         queries_pre: torch.Tensor,
         keys: torch.Tensor,
         values: torch.Tensor,
+        cache_position: torch.Tensor,
     ) -> torch.Tensor:
 
         # Remove sink tokens
@@ -181,7 +176,7 @@ class ExpectedAttentionPress:
         values = values[:, :, self.n_sink :]
 
         # Compute query statistics
-        mean_query, cov_query = self.get_query_statistics(queries_pre)
+        mean_query, cov_query = self.get_query_statistics(queries_pre, cache_position)
 
         # Compute scores
         bsz, num_key_value_heads, kv_len, d = keys.shape

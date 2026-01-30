@@ -4,14 +4,14 @@
 # GitHub Repository: https://github.com/snu-mllab/KVzip
 # ------------------------------------------------------------------------------
 import math
-from typing import List, Optional, Tuple, Union
+from typing import List, Union
 
 import torch
 import torch.nn as nn
 
 
 class KVScore:
-    """Functions to compute the score for the KV features. (kvcache.py)"""
+    """Functions for KV importance scoring, used in kvcache.py"""
 
     def __init__(self):
         self.n_heads_kv = None
@@ -40,7 +40,7 @@ class KVScore:
     def _get_score(
         self, query_states: torch.Tensor, key_states: torch.Tensor, layer_idx: int
     ):
-        """Compute KV importance scores.
+        """Compute KV importance scores (KVzip).
         # key_states: bsz x head_kv x k x dim, query_states: bsz x head x q x dim
         """
 
@@ -91,14 +91,15 @@ class KVScore:
 
         attn_weights[..., -window_size:, -window_size:] += self.causal_mask_score
 
-    ##################################################################################################
+    ##### Eviction structures ###########################################################
     def threshold(
         self, score: Union[torch.Tensor, List[torch.Tensor]], ratio: float, level: str
     ):
         if "head" in level:
             valid, thres = self._threshold_head(score, ratio)
         elif "layer" in level:
-            valid, thres = self._threshold_layer(score, ratio)
+            safeguard = 0.2 if "adakv" in level else 0
+            valid, thres = self._threshold_layer(score, ratio, safeguard)
         else:
             valid, thres = self._threshold(score, ratio)
         return valid, thres
@@ -120,12 +121,24 @@ class KVScore:
         return valids, thres
 
     def _threshold_layer(
-        self, scores: Union[torch.Tensor, List[torch.Tensor]], ratio: float
+        self,
+        scores: Union[torch.Tensor, List[torch.Tensor]],
+        ratio: float,
+        safeguard: float = 0.0,
     ):
         """Apply thresholding to KV importance scores with uniform layer budgets"""
         valids = []
         for nl, score in enumerate(scores):
             if ratio < 1:
+                if safeguard > 0:
+                    k_len = score.shape[-1]
+                    n_kept = int(k_len * ratio)
+                    n_safe = int(n_kept * safeguard)
+                    top_indices = torch.topk(scores, n_safe, dim=-1).indices
+                    scores = scores.scatter(
+                        -1, top_indices, torch.finfo(scores.dtype).max
+                    )
+
                 score_sort = torch.sort(score.reshape(-1), descending=True).values
                 n = max(int(len(score_sort) * ratio) - 1, 0)
                 thres = score_sort[n].item()
@@ -158,6 +171,7 @@ class KVScore:
 
 
 class HybridKVScore(KVScore):
+    """For sliding-windoe hybrid models"""
 
     def init_score(self, get_score=True):
         self.get_score = get_score

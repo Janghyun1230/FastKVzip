@@ -28,11 +28,6 @@ def load_gate(model, name=""):
         modules = [module for _ in range(model.model.config.num_hidden_layers)]
         print("Expected Attention")
 
-    elif name == "expect_cov":
-        module = ExpectedAttentionPress(model.model, cov=True)
-        modules = [module for _ in range(model.model.config.num_hidden_layers)]
-        print("Expected Attention with Covariance")
-
     elif name == "snap":
         module = SnapKV()
         modules = [module for _ in range(model.model.config.num_hidden_layers)]

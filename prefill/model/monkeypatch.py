@@ -8,13 +8,13 @@ def replace_attn(model_id):
         transformers.models.llama.modeling_llama.LlamaAttention.forward = (
             llama_qwen_attn_forward
         )
-        print("Replace llama attention with KVzip")
+        print("Replace llama attention with gating")
 
     elif "qwen2.5" in model_id:
         transformers.models.qwen2.modeling_qwen2.Qwen2Attention.forward = (
             llama_qwen_attn_forward
         )
-        print("Replace qwen2.5 attention with KVzip")
+        print("Replace qwen2.5 attention with gating")
 
     elif "qwen3" in model_id:
         transformers.models.qwen3.modeling_qwen3.Qwen3Attention.forward = (
@@ -23,11 +23,11 @@ def replace_attn(model_id):
         transformers.models.qwen3_moe.modeling_qwen3_moe.Qwen3MoeAttention.forward = (
             llama_qwen_attn_forward
         )
-        print("Replace qwen3 attention with KVzip")
+        print("Replace qwen3 attention with gating")
 
     elif "gemma-3" in model_id:
         transformers.models.gemma3.modeling_gemma3.Gemma3Attention.forward = (
             gemma3_attn_forward
         )
 
-        print("Replace gemma3 with ours attention")
+        print("Replace gemma3 attention with gating")

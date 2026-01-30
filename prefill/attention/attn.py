@@ -196,7 +196,7 @@ def gemma3_attn_forward(
     ):
         if past_key_value.gates[static_layer_idx].name == "expect":
             score = past_key_value.gates[static_layer_idx](
-                query_states_pre, key_states, value_states
+                query_states_pre, key_states, value_states, cache_position
             )
             past_key_value._update_score(static_layer_idx, score)
         elif past_key_value.gates[static_layer_idx].name in ["gate", "head"]:

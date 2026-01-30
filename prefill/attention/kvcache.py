@@ -155,6 +155,21 @@ class EvictCache(DynamicCache, KVScore):
         )
         return thres, r_
 
+    def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
+        # TODO
+        score = torch.stack(self.score, dim=0)[..., range[0] : range[1]]
+        valid, thres = self.threshold(score, ratio, level)
+
+        if self.valid is None:
+            self.valid = valid
+        else:
+            self.valid = torch.cat([self.valid, valid], dim=-1)
+
+        rmv = (self.valid == False).float()  # evicted KV pairs
+        r_ = 1 - rmv.mean().item()  # real compression ratio
+        self.flatten = True
+        return thres, r_
+
     def _get_valid(self, layer_idx: int, n_seq: int):
         """obtain full mask for the given keys (retain system prompt and queries)"""
         valid = torch.cat(

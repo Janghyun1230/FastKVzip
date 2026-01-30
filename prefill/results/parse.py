@@ -134,6 +134,16 @@ def set_ratios():
     return ratios
 
 
+def get_eviction_level(name):
+    if "expect" in name:
+        level = "adakv-layer"
+    elif "snap" in name:
+        level = "pair-head"
+    else:
+        level = "pair"
+    return level
+
+
 if __name__ == "__main__":
     import argparse
     import glob
@@ -148,11 +158,14 @@ if __name__ == "__main__":
         default="qwen2.5-7b-instruct-1m_fastkvzip_chunk16k_w4096",
     )
     parser.add_argument("-d", "--data", type=str, default="all")
-    parser.add_argument("-s", "--level", type=str, default="pair")
+    parser.add_argument("-l", "--level", type=str, default="")
     parser.add_argument("--task", type=str, default="qa")
     parser.add_argument("--tag", type=str, default="")
     parser.add_argument("-n", "--num", type=int, default=None)
     args = parser.parse_args()
+
+    if args.level == "":
+        args.level = get_eviction_level(args.model)
 
     ratios = set_ratios()
     folder_tag = f"_{args.tag}" if args.tag else ""

@@ -93,11 +93,11 @@ class ExpectedAttentionPress:
     # Codes are copied from the NVIDIA KVpress, with minimal modifications.
     # Refer to the code in https://github.com/NVIDIA/kvpress/blob/main/kvpress/presses/expected_attention_press.py
 
-    def __init__(self, model, cov=False):
+    def __init__(self, model):
         self.name = "expect"
         self.n_future_positions: int = 512
         self.n_sink: int = 0  # we retain system prompt's KV, so do not need to set this
-        self.use_covariance: bool = cov  # this decreases performance in our experiments
+        self.use_covariance: bool = True
         self.use_vnorm: bool = True
         self.epsilon: float = 0.02  # default value used in KVPress evaluation
 

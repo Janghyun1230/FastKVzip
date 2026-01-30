@@ -39,10 +39,6 @@ def get_data_list(dataname, modelname=""):
         data_list = multi
     elif dataname == "all":
         data_list = long + short + mid
-    elif dataname == "test":
-        data_list = ["scbench_kv", "squad"]
-    elif dataname == "test_long":
-        data_list = ["scbench_kv", "scbench_qa_eng"]
     else:
         data_list = [dataname]
 

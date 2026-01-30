@@ -35,4 +35,4 @@ You can measure the memory and decoding speed:
 ```python
 python -B profiling.py -p $context_len -r $compression_ratio
 ```
-- set `-r 1.0` for full cache speed.
+- Set `-r 1.0` to profile a case using the full KV cache.

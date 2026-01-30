@@ -37,7 +37,7 @@ class DataWrapper:
         self,
         idx: int,
         load_score=False,
-        do_score=True,
+        do_score=False,
         prefill_chunk=16000,
         window_size=512,
         chunk_ratio=1.0,

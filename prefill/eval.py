@@ -86,6 +86,7 @@ if __name__ == "__main__":
                 data_idx,
                 load_score=args.level == "head",
                 window_size=args.window_size,
+                do_score=True,
             )
             inputs, info = dataset.generate_answer(data_idx, kv, prob=False)
             eval = Evaluator(model, inputs, info)

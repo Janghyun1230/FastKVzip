@@ -44,7 +44,9 @@ def chunk_fn(ctx_ids: torch.Tensor, chunk_size: int) -> List[torch.Tensor]:
 
 class ModelKVzip:
 
-    def __init__(self, model_name: str, kv_type: str = "evict", gate_path_or_name=""):
+    def __init__(
+        self, model_name: str, kv_type: str = "evict", gate_path_or_name="fastkvzip"
+    ):
         self.model, self.tokenizer = load_model(model_name)
 
         self.name = self.model.name
@@ -156,7 +158,7 @@ class ModelKVzip:
         ctx_ids: Union[str, torch.Tensor],
         prefill_chunk_size: int = 16000,
         load_score=False,
-        do_score=True,
+        do_score=False,
         window_size=4096,
         window_ratio=0.02,
         chunk_ratio=1.0,
@@ -203,7 +205,7 @@ class ModelKVzip:
                 kv.prune_chunk(chunk_ratio, (start_idx, end_idx), level)
                 start_idx = end_idx
 
-        if chunk_ratio < 1.0:
+        if chunk_ratio < 1.0 and self.kv_type != "evict":
             valid = torch.ones_like(kv.valid[..., :window_size])
             kv.valid = torch.cat([kv.valid, valid], dim=-1)
             assert kv.valid.size(-1) == kv.ctx_len

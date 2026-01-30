@@ -40,7 +40,7 @@ if __name__ == "__main__":
                 args.idx,
                 prefill_chunk=args.prefill_chunk,
                 save_hidden=True,
-                # do_score=False,
+                do_score=True,  # kvzip
             )
             tt("Prefill context and get importance score")
 

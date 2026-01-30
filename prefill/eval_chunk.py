@@ -12,7 +12,6 @@ if __name__ == "__main__":
     args.tag += f"_chunk{args.prefill_chunk//1000}k_w{args.window_size}"
     print(f"tag: {args.tag}")
 
-    args.kv_type = "retain"  # RetainCache enables efficient evaluation across multiple compression ratios with a single prefilling.
     model = ModelKVzip(
         args.model, kv_type=args.kv_type, gate_path_or_name=args.gate_path_or_name
     )

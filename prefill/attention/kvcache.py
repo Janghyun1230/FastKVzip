@@ -35,6 +35,13 @@ class EvictCache(DynamicCache, KVScore):
         self.ctx_ids = None
 
         self.get_score = False  # indicator for KV scoring
+        self.valid = [
+            [
+                torch.zeros((0,), dtype=bool, device=self.device)
+                for _ in range(self.n_heads_kv)
+            ]
+            for _ in range(self.n_layers)
+        ]
 
         self.flatten = True  # whether KV cache is flatten or not
         self.info = {
@@ -144,45 +151,55 @@ class EvictCache(DynamicCache, KVScore):
         assert self.valid.size(-1) == self.ctx_len
 
         for layer_idx in range(self.n_layers):
-            valid = self._get_valid(layer_idx)  # list of tensor
-            self._sample_cache(layer_idx, valid)
+            valid_list = self._get_valid(layer_idx)  # list of tensor
+            self._sample_cache(layer_idx, valid_list)
 
-        r_ = (self.valid == True).float().mean().item()  # real compression ratio
-        print(f"ratio {r_:.2f} ({level}), {self._mem()} GB")
-        return thres, r_
+        print(f"KV cache {self._mem()} GB")
+        return thres, ratio
+
+    def prune_chunk(self, ratio: float, evict_range=tuple, level: str = "pair"):
+        score = torch.stack(self.score, dim=0)[..., evict_range[0] : evict_range[1]]
+        valid, thres = self.threshold(score, ratio, level)
+
+        for l in range(self.n_layers):
+            for h in range(self.n_heads_kv):
+                self.valid[l][h] = torch.cat([self.valid[l][h], valid[l][h]], dim=-1)
+            valid_list = self._get_valid(l)  # list of tensor
+            self._sample_cache(l, valid_list)
+            
+            for h in range(self.n_heads_kv):
+                v = self.valid[l][h]
+                self.valid[l][h] = torch.ones(
+                    v.sum().item(), dtype=torch.bool, device=v.device
+                )
+
+        return thres, ratio
 
     def _get_valid(self, layer_idx: int):
         """obtain full mask for the given keys (retain system prompt and queries)"""
-        valid = self.valid[layer_idx]
-        pad_size = self._seen_tokens - valid.shape[-1] - self.sink  # query
-        # sys prompt + context + query
-        valid = F.pad(valid, (self.sink, pad_size), mode="constant", value=True)
-        return valid
+        valid_list = []
+        for h in range(self.n_heads_kv):
+            valid = self.valid[layer_idx][h]
+            pad_size = self.info["len_k"][layer_idx][h] - valid.shape[-1] - self.sink
 
-    def _sample_cache(self, layer_idx, valid):
-        self.key_cache[layer_idx] = self.key_cache[layer_idx][valid.view(-1)]
-        self.value_cache[layer_idx] = self.value_cache[layer_idx][valid.view(-1)]
+            # sys prompt + context + query/local_window
+            valid = F.pad(valid, (self.sink, pad_size), mode="constant", value=True)
+            valid_list.append(valid)
+        return valid_list
+
+    def _sample_cache(self, layer_idx, valid_list):
+        mask = torch.cat(valid_list)
+        self.key_cache[layer_idx] = self.key_cache[layer_idx][mask]
+        self.value_cache[layer_idx] = self.value_cache[layer_idx][mask]
 
         # length of retained KV per head
-        lens_k_head = valid.sum(-1).squeeze().int()
+        lens_k_head = torch.stack([v.sum().int() for v in valid_list])
         cu_seqlens_k = lens_k_head.cumsum(0).int()
         cu_seqlens_k = torch.cat([self.zero, cu_seqlens_k])
 
         self.info["len_k"][layer_idx] = lens_k_head
         self.info["max_len_k"][layer_idx] = lens_k_head.max()
         self.info["cu_len_k"][layer_idx] = cu_seqlens_k
-
-    def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
-        score = torch.stack(self.score, dim=0)[..., range[0] : range[1]]
-        valid, thres = self.threshold(score, ratio, level)
-
-        if self.valid is None:
-            self.valid = valid
-        else:
-            self.valid = torch.cat([self.valid, valid], dim=-1)
-
-        r_ = (self.valid == True).float().mean().item()  # real compression ratio
-        return thres, r_
 
     def prepare(
         self,
@@ -291,13 +308,13 @@ class RetainCache(DynamicCache, KVScore):
         self.valid, thres = self.threshold(self.score, ratio, level)
         assert self.valid.size(-1) == self.ctx_len
 
-        r_ = (self.valid == True).float().mean().item()  # real compression ratio
+        r_ = self.valid.float().mean().item()  # real compression ratio
         self.flatten = True
         print(f"ratio {r_:.2f} ({level}), threshold {thres:.4f}")
         return thres, r_
 
-    def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
-        score = torch.stack(self.score, dim=0)[..., range[0] : range[1]]
+    def prune_chunk(self, ratio: float, evict_range=tuple, level: str = "pair"):
+        score = torch.stack(self.score, dim=0)[..., evict_range[0] : evict_range[1]]
         valid, thres = self.threshold(score, ratio, level)
 
         if self.valid is None:
@@ -305,7 +322,7 @@ class RetainCache(DynamicCache, KVScore):
         else:
             self.valid = torch.cat([self.valid, valid], dim=-1)
 
-        r_ = (self.valid == True).float().mean().item()  # real compression ratio
+        r_ = self.valid.float().mean().item()  # real compression ratio
         self.flatten = True
         return thres, r_
 
@@ -597,13 +614,13 @@ class RetainHybridCache(HybridCache, HybridKVScore):
         self.valid, thres = self.threshold(self.score, ratio, level)
         assert self.valid.size(-1) == self.ctx_len
 
-        r_ = (self.valid == True).float().mean().item()  # real compression ratio
+        r_ = self.valid.float().mean().item()  # real compression ratio
         self.flatten = True
         print(f"ratio {r_:.2f} ({level}), threshold {thres:.4f}")
         return thres, r_
 
-    def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
-        score = torch.stack(self.score, dim=0)[..., range[0] : range[1]]
+    def prune_chunk(self, ratio: float, evict_range=tuple, level: str = "pair"):
+        score = torch.stack(self.score, dim=0)[..., evict_range[0] : evict_range[1]]
         valid, thres = self.threshold(score, ratio, level)
 
         if self.valid is None:
@@ -611,7 +628,7 @@ class RetainHybridCache(HybridCache, HybridKVScore):
         else:
             self.valid = torch.cat([self.valid, valid], dim=-1)
 
-        r_ = (self.valid == True).float().mean().item()  # real compression ratio
+        r_ = self.valid.float().mean().item()  # real compression ratio
         self.flatten = True
         return thres, r_
 

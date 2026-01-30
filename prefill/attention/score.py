@@ -102,7 +102,7 @@ class KVScore:
             valid, thres = self._threshold_layer(score, ratio, safeguard)
         else:
             valid, thres = self._threshold(score, ratio)
-        return valid, thres
+        return valid.squeeze(1), thres
 
     def _threshold(self, score: Union[torch.Tensor, List[torch.Tensor]], ratio: float):
         """Apply thresholding to KV importance scores"""

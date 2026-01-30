@@ -16,23 +16,26 @@ if __name__ == "__main__":
 
     tt = TimeStamp(verbose=True)  # for time measurement
 
+    print("\nObtaining full-cache generation results")
+    kv = dataset.prefill_context(args.idx)
+    inputs, info = dataset.generate_answer(args.idx, kv)
+    eval = Evaluator(model, inputs, info, verbose=True)
+    del kv
+    tt("[obatin full cache answer]")
+
+    print("\nObtaining chunked-prefill-evict generation results")
     kv = dataset.prefill_context(
         args.idx,
         load_score=args.level == "head",
         prefill_chunk=args.prefill_chunk,
         window_size=args.window_size,
+        chunk_ratio=args.ratio,
+        level=args.level,
     )
-    tt("[prefill context and get importance score]")
-
-    inputs, info = dataset.generate_answer(args.idx, kv)
-    tt("[get answers and prediction probabilities for evaluation]")
-    print()
-
-    kv.prune(args.ratio, args.level)  # evict KV
-    eval = Evaluator(model, inputs, info, verbose=True)
+    tt("[chunked prefill]")
 
     for task in info.keys():
-        # tt.set()
+        tt.set()
         eval.generation(kv, task)  # compare generation results (full vs evicted cache)
-        # tt(f"[generation at ratio {args.ratio}]")
+        tt(f"[generation at ratio {args.ratio}]")
         eval.forward(kv, task)  # compare output probabilites on answers

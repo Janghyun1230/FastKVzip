@@ -6,6 +6,7 @@
 from typing import Any, Dict, Optional, Tuple
 
 import torch
+import torch.nn.functional as F
 from attention.score import HybridKVScore, KVScore
 from transformers import DynamicCache, HybridCache
 
@@ -35,10 +36,6 @@ class EvictCache(DynamicCache, KVScore):
 
         self.get_score = False  # indicator for KV scoring
 
-        self.valid_pad = torch.ones(
-            (1, self.n_heads_kv, self.start_idx), dtype=bool, device=self.device
-        )
-
         self.flatten = True  # whether KV cache is flatten or not
         self.info = {
             "len_k": [
@@ -50,11 +47,12 @@ class EvictCache(DynamicCache, KVScore):
                 for _ in range(self.n_layers)
             ],
             "max_len_k": [0 for _ in range(self.n_layers)],
-        }
+        }  # kv length info of the flattened KV cache
         self.cu_head = torch.arange(
             self.n_heads_kv + 1, dtype=torch.int32, device=self.device
         )
         self.cu_len_q = None
+        self.zero = torch.tensor([0], dtype=torch.int32, device=self.device)
 
     def update(
         self,
@@ -145,18 +143,36 @@ class EvictCache(DynamicCache, KVScore):
         self.valid, thres = self.threshold(self.score, ratio, level)
         assert self.valid.size(-1) == self.ctx_len
 
-        rmv = (self.valid == False).float()  # evicted KV pairs
-        r_ = 1 - rmv.mean().item()  # real compression ratio
+        for layer_idx in range(self.n_layers):
+            valid = self._get_valid(layer_idx)  # list of tensor
+            self._sample_cache(layer_idx, valid)
 
-        self.prepare_init()
-        self.flatten = True
-        print(
-            f"ratio {r_:.2f} ({level}), {self._mem()} GB (evict {rmv.sum():.0f} pairs)"
-        )
+        r_ = (self.valid == True).float().mean().item()  # real compression ratio
+        print(f"ratio {r_:.2f} ({level}), {self._mem()} GB")
         return thres, r_
 
+    def _get_valid(self, layer_idx: int):
+        """obtain full mask for the given keys (retain system prompt and queries)"""
+        valid = self.valid[layer_idx]
+        pad_size = self._seen_tokens - valid.shape[-1] - self.sink  # query
+        # sys prompt + context + query
+        valid = F.pad(valid, (self.sink, pad_size), mode="constant", value=True)
+        return valid
+
+    def _sample_cache(self, layer_idx, valid):
+        self.key_cache[layer_idx] = self.key_cache[layer_idx][valid.view(-1)]
+        self.value_cache[layer_idx] = self.value_cache[layer_idx][valid.view(-1)]
+
+        # length of retained KV per head
+        lens_k_head = valid.sum(-1).squeeze().int()
+        cu_seqlens_k = lens_k_head.cumsum(0).int()
+        cu_seqlens_k = torch.cat([self.zero, cu_seqlens_k])
+
+        self.info["len_k"][layer_idx] = lens_k_head
+        self.info["max_len_k"][layer_idx] = lens_k_head.max()
+        self.info["cu_len_k"][layer_idx] = cu_seqlens_k
+
     def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
-        # TODO
         score = torch.stack(self.score, dim=0)[..., range[0] : range[1]]
         valid, thres = self.threshold(score, ratio, level)
 
@@ -165,53 +181,8 @@ class EvictCache(DynamicCache, KVScore):
         else:
             self.valid = torch.cat([self.valid, valid], dim=-1)
 
-        rmv = (self.valid == False).float()  # evicted KV pairs
-        r_ = 1 - rmv.mean().item()  # real compression ratio
-        self.flatten = True
+        r_ = (self.valid == True).float().mean().item()  # real compression ratio
         return thres, r_
-
-    def _get_valid(self, layer_idx: int, n_seq: int):
-        """obtain full mask for the given keys (retain system prompt and queries)"""
-        valid = torch.cat(
-            [self.valid_pad, self.valid[layer_idx]], dim=-1
-        )  # sys prompt + context
-
-        size = list(valid.shape)
-        size[-1] = n_seq - valid.shape[-1]
-        ones = torch.ones(size, device=valid.device, dtype=bool)
-        valid = torch.cat([valid, ones], dim=-1)  # sys prompt + context + query ...
-
-        return valid
-
-    def prepare_init(self):
-        """Evict KV and prepare initial meta data for FlashAttention"""
-        len_k_layers = []
-        max_len_k_layers = []
-        cu_len_k_layers = []
-
-        for layer_idx in range(self.n_layers):
-            valid = self._get_valid(layer_idx, self._seen_tokens)
-
-            self.key_cache[layer_idx] = self.key_cache[layer_idx][valid.view(-1)]
-            self.value_cache[layer_idx] = self.value_cache[layer_idx][valid.view(-1)]
-
-            lens_k_head = (
-                valid.sum(-1).squeeze().int()
-            )  # length of retained KV per head
-            cu_seqlens_k = lens_k_head.cumsum(0).int()
-            cu_seqlens_k = torch.cat(
-                [torch.tensor([0], dtype=torch.int32, device=self.device), cu_seqlens_k]
-            )
-
-            len_k_layers.append(lens_k_head)
-            max_len_k_layers.append(lens_k_head.max())
-            cu_len_k_layers.append(cu_seqlens_k)
-
-        self.info = {
-            "len_k": len_k_layers,  # kv lengths of heads in a layer
-            "max_len_k": max_len_k_layers,  # max kv lengths of heads in a layer
-            "cu_len_k": cu_len_k_layers,  # cumulative kv length of heads in a layer
-        }
 
     def prepare(
         self,
@@ -268,10 +239,6 @@ class RetainCache(DynamicCache, KVScore):
         self.flatten = False
         self.valid = None
 
-        self.valid_pad = torch.ones(
-            (1, self.n_heads_kv, self.start_idx), dtype=bool, device=self.device
-        )
-
         self.hidden_cache = []
         self.save_hidden = False
 
@@ -324,12 +291,9 @@ class RetainCache(DynamicCache, KVScore):
         self.valid, thres = self.threshold(self.score, ratio, level)
         assert self.valid.size(-1) == self.ctx_len
 
-        rmv = (self.valid == False).float()  # evicted KV pairs
-        r_ = 1 - rmv.mean().item()  # real compression ratio
+        r_ = (self.valid == True).float().mean().item()  # real compression ratio
         self.flatten = True
-        print(
-            f"ratio {r_:.2f} ({level}), threshold {thres:.4f} (evict {rmv.sum():.0f} pairs)"
-        )
+        print(f"ratio {r_:.2f} ({level}), threshold {thres:.4f}")
         return thres, r_
 
     def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
@@ -341,22 +305,16 @@ class RetainCache(DynamicCache, KVScore):
         else:
             self.valid = torch.cat([self.valid, valid], dim=-1)
 
-        rmv = (self.valid == False).float()  # evicted KV pairs
-        r_ = 1 - rmv.mean().item()  # real compression ratio
+        r_ = (self.valid == True).float().mean().item()  # real compression ratio
         self.flatten = True
         return thres, r_
 
     def _get_valid(self, layer_idx: int, n_seq: int):
         """obtain full mask for the given keys (retain system prompt and queries)"""
-        valid = torch.cat(
-            [self.valid_pad, self.valid[layer_idx]], dim=-1
-        )  # sys prompt + context
-
-        size = list(valid.shape)
-        size[-1] = n_seq - valid.shape[-1]
-        ones = torch.ones(size, device=valid.device, dtype=bool)
-        valid = torch.cat([valid, ones], dim=-1)  # sys prompt + context + query ...
-
+        valid = self.valid[layer_idx]
+        pad_size = n_seq - valid.shape[-1] - self.sink  # query
+        # sys prompt + context + query
+        valid = F.pad(valid, (self.sink, pad_size), mode="constant", value=True)
         return valid
 
     def prepare(
@@ -435,10 +393,6 @@ class RetainHybridCache(HybridCache, HybridKVScore):
         self.get_score = False  # indicator for KV scoring
         self.flatten = False
         self.valid = None
-
-        self.valid_pad = torch.ones(
-            (1, self.n_heads_kv, self.start_idx), dtype=bool, device=self.device
-        )
 
         self._seen_tokens = 0  # incoming tokens with enable_update=True
         self._cur_tokens = 0  # current cache length (excluding the incoming tokens)
@@ -630,13 +584,10 @@ class RetainHybridCache(HybridCache, HybridKVScore):
         ), "Layer index is not in static layer id"
         layer_idx = self.layer_id_to_static_id[layer_idx]
 
-        valid = torch.cat([self.valid_pad, self.valid[layer_idx]], dim=-1)
-
-        size = list(valid.shape)
-        size[-1] = n_seq - valid.shape[-1]
-        ones = torch.ones(size, device=valid.device, dtype=bool)
-        valid = torch.cat([valid, ones], dim=-1)
-
+        valid = self.valid[layer_idx]
+        pad_size = n_seq - valid.shape[-1] - self.sink  # query
+        # sys prompt + context + query
+        valid = F.pad(valid, (self.sink, pad_size), mode="constant", value=True)
         return valid
 
     def prune(self, ratio: float, level: str = "pair"):
@@ -646,12 +597,9 @@ class RetainHybridCache(HybridCache, HybridKVScore):
         self.valid, thres = self.threshold(self.score, ratio, level)
         assert self.valid.size(-1) == self.ctx_len
 
-        rmv = (self.valid == False).float()  # evicted KV pairs
-        r_ = 1 - rmv.mean().item()  # real compression ratio
+        r_ = (self.valid == True).float().mean().item()  # real compression ratio
         self.flatten = True
-        print(
-            f"ratio {r_:.2f} ({level}), threshold {thres:.4f} (evict {rmv.sum():.0f} pairs)"
-        )
+        print(f"ratio {r_:.2f} ({level}), threshold {thres:.4f}")
         return thres, r_
 
     def prune_chunk(self, ratio: float, range=tuple, level: str = "pair"):
@@ -663,8 +611,7 @@ class RetainHybridCache(HybridCache, HybridKVScore):
         else:
             self.valid = torch.cat([self.valid, valid], dim=-1)
 
-        rmv = (self.valid == False).float()  # evicted KV pairs
-        r_ = 1 - rmv.mean().item()  # real compression ratio
+        r_ = (self.valid == True).float().mean().item()  # real compression ratio
         self.flatten = True
         return thres, r_
 

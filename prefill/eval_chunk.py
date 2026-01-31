@@ -1,3 +1,7 @@
+# ==============================================================================
+# Benchmark evaluation with chunked-prefill-evict
+# ==============================================================================
+
 from collections import defaultdict
 
 from eval import get_data_list, set_ratios
@@ -12,9 +16,7 @@ if __name__ == "__main__":
     args.tag += f"_chunk{args.prefill_chunk//1000}k_w{args.window_size}"
     print(f"tag: {args.tag}")
 
-    model = ModelKVzip(
-        args.model, kv_type=args.kv_type, gate_path_or_name=args.gate_path_or_name
-    )
+    model = ModelKVzip(args.model, args.kv_type, args.gate_path_or_name)
 
     for args.data in get_data_list(args.data, model.name):
         dataset = load_dataset_all(args.data, model.tokenizer)  # list of data
@@ -37,12 +39,10 @@ if __name__ == "__main__":
                 # Get generation results with chunked-prefill-evict
                 kv = dataset.prefill_context(
                     data_idx,
-                    load_score=args.level == "head",
                     prefill_chunk=args.prefill_chunk,
                     window_size=args.window_size,
                     chunk_ratio=ratio,
                     level=args.level,
-                    do_score=False,
                 )
                 results = eval(kv, generate=True)
 

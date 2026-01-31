@@ -1,3 +1,6 @@
+# ==============================================================================
+# Profiling speed and memory efficiency of Fast KVzip
+# ==============================================================================
 import argparse
 
 from model import ModelKVzip
@@ -50,7 +53,7 @@ stamp(f"KV cache size: {kv._mem()} GB")
 print("-" * 70)
 for q, a in zip(queries, answers):
     query_ids = model.apply_template(q)
-    output = model.generate(query_ids, kv=kv, update_cache=False)  # efficient inference
+    output = model.generate(query_ids, kv=kv, update_cache=False)  # reset kv cache
     print(model.decode(query_ids), output, f"\n(Ground-truth: {a})")
 
     q_len = query_ids.shape[1]

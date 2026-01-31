@@ -1,3 +1,6 @@
+# ==============================================================================
+# Benchmark evaluation with KV eviction after prefill
+# ==============================================================================
 from collections import defaultdict
 
 
@@ -68,9 +71,7 @@ if __name__ == "__main__":
         print(f"tag: {args.tag}")
 
     args.kv_type = "retain"  # RetainCache enables efficient evaluation across multiple compression ratios with a single prefilling.
-    model = ModelKVzip(
-        args.model, kv_type=args.kv_type, gate_path_or_name=args.gate_path_or_name
-    )
+    model = ModelKVzip(args.model, args.kv_type, args.gate_path_or_name)
 
     for args.data in get_data_list(args.data, model.name):
         dataset = load_dataset_all(args.data, model.tokenizer)  # list of data
@@ -84,7 +85,6 @@ if __name__ == "__main__":
         for data_idx in range(args.idx, max_idx):
             kv = dataset.prefill_context(
                 data_idx,
-                load_score=args.level == "head",
                 window_size=args.window_size,
                 do_score=True,
             )

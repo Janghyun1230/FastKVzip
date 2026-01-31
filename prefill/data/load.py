@@ -1,8 +1,8 @@
-import os
+import json
 
 import numpy as np
-import torch
 from datasets import Dataset, load_dataset
+from tqdm import tqdm
 
 
 def load_dataset_all(name, tokenizer, n_data=100):
@@ -33,6 +33,8 @@ def load_dataset_all(name, tokenizer, n_data=100):
         dataset = load_scbench(name)
     elif "fineweb" in name:
         dataset = load_fineweb(name)
+    elif "mrcr" in name:
+        dataset = load_mrcr(tokenizer, n_data)
     else:
         raise ValueError(f"Invalid dataset: {name}")
 
@@ -113,6 +115,31 @@ def load_scbench(name):
     return dataset
 
 
+def check_scbench_name(name):
+    name = name.split("scbench_")[1]
+    possible_tags = [
+        "many_shot",
+        "mf",
+        "repoqa",
+        "choice_eng",
+        "prefix_suffix",
+        "summary",
+        "qa_eng",
+        "vt",
+        "kv",
+        "summary_with_needles",
+        "repoqa_and_kv",
+    ]
+    if "tiny" in name:
+        name = name.split("_tiny")[0]
+    elif "short" in name:
+        name = name.split("_short")[0]
+    elif "mid" in name:
+        name = name.split("_mid")[0]
+
+    assert name in possible_tags, "SCBench data name not exist!"
+
+
 def load_fineweb(name):
     """fineweb-[10k, 10k-cat, 100k]"""
 
@@ -162,29 +189,45 @@ def load_fineweb(name):
     return dataset
 
 
-def check_scbench_name(name):
-    name = name.split("scbench_")[1]
-    possible_tags = [
-        "many_shot",
-        "mf",
-        "repoqa",
-        "choice_eng",
-        "prefix_suffix",
-        "summary",
-        "qa_eng",
-        "vt",
-        "kv",
-        "summary_with_needles",
-        "repoqa_and_kv",
-    ]
-    if "tiny" in name:
-        name = name.split("_tiny")[0]
-    elif "short" in name:
-        name = name.split("_short")[0]
-    elif "mid" in name:
-        name = name.split("_mid")[0]
+def build_prompt_text(sample):
+    """Build prompt text from sample messages (mrcr)"""
+    messages = json.loads(sample["prompt"])
+    prompt_text = ""
+    for msg in messages[:-1]:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "user":
+            prompt_text += f"User: {content}\n\n"
+        else:
+            prompt_text += f"Assistant: {content}\n\n"
+    return prompt_text, messages[-1]["content"]
 
-    assert name in possible_tags, "SCBench data name not exist!"
+
+def load_mrcr(tokenizer, n_data=2400, max_tokens=128000, n_needles=None):
+    """Load MRCR dataset filtered by actual token count"""
+    dataset = load_dataset("openai/mrcr", name="default")["train"]
+
+    data_list = []
+    print(f"Filtering samples by token count (max_tokens={max_tokens})...")
+
+    for sample in tqdm(dataset, desc="Tokenizing"):
+        if n_needles is not None and sample["n_needles"] != n_needles:
+            continue
+
+        prompt_text, last_query = build_prompt_text(sample)
+        n_tokens = len(tokenizer.encode(prompt_text))
+
+        if n_tokens <= max_tokens:
+            sample_with_tokens = dict(sample)
+            sample_with_tokens["n_tokens"] = n_tokens
+            sample_with_tokens["prompt"] = prompt_text
+            sample_with_tokens["query"] = last_query
+            data_list.append(sample_with_tokens)
+
+        if len(data_list) >= n_data:
+            break
+
+    return data_list
 
 
 if __name__ == "__main__":

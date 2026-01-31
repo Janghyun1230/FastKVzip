@@ -36,7 +36,6 @@ class DataWrapper:
     def prefill_context(
         self,
         idx: int,
-        load_score=False,
         do_score=False,
         prefill_chunk=16000,
         window_size=512,
@@ -50,7 +49,6 @@ class DataWrapper:
 
         kv = self.model.prefill(
             ctx_ids,
-            load_score=load_score,
             do_score=do_score,
             prefill_chunk_size=prefill_chunk,
             window_size=window_size,
@@ -59,8 +57,8 @@ class DataWrapper:
             save_hidden=save_hidden,
         )
 
-        print(f"# prefill {self.model.name} {self.name}-{idx}:", end=" ")
         print(
+            f"# prefill {self.model.name} {self.name}-{idx}: "
             f"{len(ctx_ids[0])} tokens, KV cache {kv._mem()} GB, {kv.key_cache[0].dtype}"
         )
         return kv

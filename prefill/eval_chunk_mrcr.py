@@ -81,9 +81,9 @@ if __name__ == "__main__":
         tt(f"[mrcr-{data_idx}]\n")
 
     print("\n" + "=" * 70)
-    print(f"MRCR Evaluation Results ({args.model}, {args.tag})")
+    print(f"MRCR Evaluation Results (%) ({args.model}, {args.tag})")
     for ratio in sorted(scores_by_ratio.keys(), reverse=True):
         scores = scores_by_ratio[ratio]
         if scores:
             avg_score = sum(scores) / len(scores)
-            print(f"Ratio {ratio:.0%}: {avg_score:.4f}")
+            print(f"Ratio {ratio}: {avg_score * 100:.2f}")

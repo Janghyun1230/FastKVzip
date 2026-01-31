@@ -250,7 +250,7 @@ def gemma3_attn_forward(
         past_key_value._get_score(query_states, key_states, self.layer_idx)
 
     if (
-        getattr(past_key_value, "pruned", None)
+        getattr(past_key_value, "flatten", None)
         and self.layer_idx in past_key_value.layer_id_to_static_id
     ):
 

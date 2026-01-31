@@ -44,7 +44,7 @@ if __name__ == "__main__":
         ctx_ids = model.encode(sample["prompt"])
         query_ids = model.apply_template(sample["query"])
 
-        outputs = defaultdict(list)
+        outputs = {}
         for t, ratio in enumerate(set_ratios()):
             kv = model.prefill(
                 ctx_ids,
@@ -65,16 +65,12 @@ if __name__ == "__main__":
             )
             scores_by_ratio[ratio].append(score)
 
-            outputs["mrcr"].append(
-                [
-                    [ratio, 0, 0],
-                    {
-                        "score": round(score, 4),
-                        "response": response,
-                        "n_tokens": sample["n_tokens"],
-                    },
-                ]
-            )
+            outputs[ratio] = {
+                "score": round(score, 4),
+                "response": response,
+                "ground-truth": sample["answer"],
+                "n_tokens": sample["n_tokens"],
+            }
             del kv
 
         save_result(model.name, args, outputs, data_idx)

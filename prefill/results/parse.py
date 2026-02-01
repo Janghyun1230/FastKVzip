@@ -242,6 +242,6 @@ if __name__ == "__main__":
 
     print("=" * 50)
     print(data_list)
-    print("Averaged relative performance")
+    print("Averaged relative performance (note, MRCR is not included)")
     for r in ratios:
         print(f"{np.mean(scores_ratio_all[r]) * 100:.2f}")

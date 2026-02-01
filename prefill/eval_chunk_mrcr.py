@@ -35,11 +35,10 @@ if __name__ == "__main__":
     dataset = load_dataset_all(args.data, model.tokenizer, n_data=2400)
 
     tt = TimeStamp(True)
-    max_idx = min(args.idx + args.num, len(dataset))
-    print("=" * 80, f"\nStart evaluation with {args.idx}~{max_idx} samples")
+    print("=" * 80, f"\nStart evaluation with {len(dataset)} samples")
 
     scores_by_ratio = defaultdict(list)
-    for data_idx in range(args.idx, max_idx):
+    for data_idx in range(len(dataset)):
         sample = dataset[data_idx]
         ctx_ids = model.encode(sample["prompt"])
         query_ids = model.apply_template(sample["query"])

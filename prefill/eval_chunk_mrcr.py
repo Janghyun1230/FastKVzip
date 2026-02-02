@@ -1,5 +1,5 @@
 # ==============================================================================
-# Benchmark evaluation with chunked-prefill-evict (MRCR)
+# Benchmark evaluation with chunked-prefill-evict (MRCR, context length <= 128K)
 # ==============================================================================
 
 from collections import defaultdict

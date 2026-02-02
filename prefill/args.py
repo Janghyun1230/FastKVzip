@@ -13,14 +13,14 @@ parser.add_argument(
     type=str,
     default="retain",
     choices=["evict", "retain"],
-    help="retain: full cache in storage for effcient evaluation over multiple compression ratios",
+    help="retain: store full cache in storage, evict: delete the evicted KV from store.",
 )
 parser.add_argument(
     "--level",
     type=str,
-    default="pair",
-    choices=["pair", "pair-head", "pair-layer", "adakv-layer", "head"],
-    help="pair-head/layer: uniform head/layer-budget; adakv-layer: with safeguard; head: context-independent head-level eviction.",
+    default="",
+    choices=["pair", "pair-head", "pair-layer", "adakv-layer", ""],
+    help="Eviction structure. pair-head/layer: uniform head/layer-budget; adakv-layer: with safeguard",
 )
 # Model and Data
 parser.add_argument("-m", "--model", type=str, default="Qwen/Qwen2.5-7B-Instruct-1M")
@@ -38,6 +38,15 @@ parser.add_argument(
 parser.add_argument("--tag", type=str, default="", help="evaluation folder name tag")
 args = parser.parse_args()
 
+
+if args.level == "":
+    # Use default eviction structure setting
+    if "expect" in args.gate_path_or_name:
+        args.level = "adakv-layer"
+    elif "snap" in args.gate_path_or_name:
+        args.level = "pair-head"
+    else:
+        args.level = "pair"
 
 if args.tag:
     args.tag = f"_{args.tag}"

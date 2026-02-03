@@ -128,17 +128,16 @@ class KVScore:
     ):
         """Apply thresholding to KV importance scores with uniform layer budgets"""
         valids = []
+
+        if safeguard > 0:
+            k_len = scores.shape[-1]
+            n_kept = int(k_len * ratio)
+            n_safe = int(n_kept * safeguard)
+            top_indices = torch.topk(scores, n_safe, dim=-1).indices
+            scores = scores.scatter(-1, top_indices, torch.finfo(scores.dtype).max)
+
         for nl, score in enumerate(scores):
             if ratio < 1:
-                if safeguard > 0:
-                    k_len = score.shape[-1]
-                    n_kept = int(k_len * ratio)
-                    n_safe = int(n_kept * safeguard)
-                    top_indices = torch.topk(scores, n_safe, dim=-1).indices
-                    scores = scores.scatter(
-                        -1, top_indices, torch.finfo(scores.dtype).max
-                    )
-
                 score_sort = torch.sort(score.reshape(-1), descending=True).values
                 n = max(int(len(score_sort) * ratio) - 1, 0)
                 thres = score_sort[n].item()

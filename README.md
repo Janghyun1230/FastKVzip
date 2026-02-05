@@ -12,7 +12,7 @@
 and decoding stages.
 - Near-lossless performance on general tasks with up to a <b>70% KV cache eviction
 ratio</b> while significantly improving attention efficiency.
-- A <b>Row-Rank Sink Attention</b> gate architecture, trained by directly distilling importance scores from [KVzip](https://arxiv.org/abs/2505.23416) in under one H100 hour.
+- A <b>Low-Rank Sink Attention</b> gate architecture, trained by directly distilling importance scores from [KVzip](https://arxiv.org/abs/2505.23416) in under one H100 hour.
 
 
 ## Installation

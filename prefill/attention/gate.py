@@ -125,7 +125,7 @@ def load_fastkvzip(model_name="Qwen/Qwen3-8B", file_name="fastkvzip", device="cu
         module.load_state_dict(weight)
         modules.append(module)
 
-    print(f"load weight {gate_id} ({module})")
+    print(f"load gate {gate_id} ({module})")
     return modules
 
 

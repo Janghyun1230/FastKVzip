@@ -95,6 +95,9 @@ class KVScore:
     def threshold(
         self, score: Union[torch.Tensor, List[torch.Tensor]], ratio: float, level: str
     ):
+        if type(score) == list:
+            score = torch.stack(score, dim=0)
+
         if "head" in level:
             valid, thres = self._threshold_head(score, ratio)
         elif "layer" in level:
@@ -106,8 +109,6 @@ class KVScore:
 
     def _threshold(self, score: Union[torch.Tensor, List[torch.Tensor]], ratio: float):
         """Apply thresholding to KV importance scores"""
-        if type(score) == list:
-            score = torch.stack(score, dim=0)
         if ratio < 1:
             score_sort = torch.sort(score.reshape(-1), descending=True).values
             n = max(int(len(score_sort) * ratio) - 1, 0)

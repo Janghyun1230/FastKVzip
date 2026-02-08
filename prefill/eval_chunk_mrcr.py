@@ -38,7 +38,7 @@ if __name__ == "__main__":
     print("=" * 80, f"\nStart evaluation with {len(dataset)} samples")
 
     scores_by_ratio = defaultdict(list)
-    for data_idx in range(len(dataset)):
+    for data_idx in range(args.idx, len(dataset)):
         sample = dataset[data_idx]
         ctx_ids = model.encode(sample["prompt"])
         query_ids = model.apply_template(sample["query"])

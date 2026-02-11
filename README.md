@@ -13,7 +13,7 @@ and decoding stages.
 - Near-lossless performance on general tasks with up to a <b>70% KV cache eviction
 ratio</b> while significantly improving attention efficiency.
 - A <b>Low-Rank Sink Attention</b> gate architecture, trained by directly distilling importance scores from [KVzip](https://arxiv.org/abs/2505.23416) in under one H100 hour.
-
+- [NVIDIA KVpress](https://github.com/NVIDIA/kvpress) adds support for Fast KVzip (see also [Leaderboard](https://huggingface.co/spaces/nvidia/kvpress-leaderboard)).
 
 ## Installation
 Supported GPUs: NVIDIA Ampere (e.g, A100, RTX3090), and Hopper (e.g., H100).
